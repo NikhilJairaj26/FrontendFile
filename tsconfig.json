@@ -1,17 +1,31 @@
 {
-  "extends": "expo/tsconfig.base",
+  "extends": "expo/tsconfig.base", // Extend the base Expo TypeScript config
   "compilerOptions": {
-    "strict": true,
+    "strict": true, // Enable all strict type-checking options
+    "allowImportingTsExtensions": true, // Allow importing TypeScript extensions
+    "allowJs": true, // Allow JavaScript files to be compiled
+    "allowSyntheticDefaultImports": true, // Allow synthetic default imports
+    "esModuleInterop": true, // Enable compatibility with ES modules
+    "isolatedModules": true, // Ensure each file can be transpiled independently
+    "jsx": "react-native", // Use 'react-native' for JSX to support React Native
+    "lib": ["es6", "dom"], // Include ES6 and DOM libraries
+    "moduleResolution": "node", // Use Node.js style module resolution
+    "noEmit": true, // Do not emit JavaScript files (only type checking)
+    "target": "esnext", // Target the latest ECMAScript version
+    "resolveJsonModule": true, // Allow importing JSON modules
+    "skipLibCheck": true, // Skip type checking of declaration files
+    "baseUrl": ".", // Base directory for resolving non-relative module names
     "paths": {
-      "@/*": [
-        "./*"
-      ]
-    }
+      "@/*": ["./src/*"] // Map '@/' to the 'src' directory for easier imports
+    },
+    "forceConsistentCasingInFileNames": true, // Ensure consistent casing in file names
+    "types": ["jest", "node"] // Include global types for Jest and Node.js
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+  "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"], // Include all TS/TSX and JS/JSX files
+  "exclude": [
+    "node_modules", // Exclude node_modules
+    "babel.config.js", // Exclude Babel config
+    "metro.config.js", // Exclude Metro config
+    "jest.config.js" // Exclude Jest config
   ]
 }
