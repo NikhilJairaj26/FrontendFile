@@ -1,79 +1,73 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-interface User {
-  token: string;
+// Define user interface
+export interface UserState {
   email: string;
+  token: string;
 }
 
+// Define context interface
 interface UserContextType {
-  user: User | null;
-  setUser: (user: User | null) => Promise<void>;
+  user: UserState | null;
+  setUser: (user: UserState | null) => void;
+  isLoading: boolean;
   logout: () => Promise<void>;
 }
 
-const UserContext = createContext<UserContextType | undefined>(undefined);
+// Create context with default values
+const UserContext = createContext<UserContextType>({
+  user: null,
+  setUser: () => {},
+  isLoading: true,
+  logout: async () => {}
+});
 
-export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUserState] = useState<User | null>(null);
+// Provider component
+export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<UserState | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load user data on app startup
+  // Load user from storage on mount
   useEffect(() => {
     const loadUser = async () => {
       try {
         const token = await AsyncStorage.getItem('token');
-        const email = await AsyncStorage.getItem('email');
-        if (token && email) {
-          setUserState({ token, email });
+        const userEmail = await AsyncStorage.getItem('userEmail');
+        
+        if (token && userEmail) {
+          setUser({
+            token,
+            email: userEmail
+          });
         }
       } catch (error) {
         console.error('Error loading user data:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
-
+    
     loadUser();
   }, []);
 
-  // Save user data and update state
-  const setUser = async (newUser: User | null) => {
-    try {
-      if (newUser) {
-        await AsyncStorage.setItem('token', newUser.token);
-        await AsyncStorage.setItem('email', newUser.email);
-        setUserState(newUser);
-      } else {
-        await AsyncStorage.removeItem('token');
-        await AsyncStorage.removeItem('email');
-        setUserState(null);
-      }
-    } catch (error) {
-      console.error('Error saving user data:', error);
-    }
-  };
-
-  // Logout function
+  // Implement logout function
   const logout = async () => {
     try {
       await AsyncStorage.removeItem('token');
-      await AsyncStorage.removeItem('email');
-      setUserState(null);
+      await AsyncStorage.removeItem('userEmail');
+      setUser(null);
     } catch (error) {
       console.error('Error during logout:', error);
     }
   };
 
   return (
-    <UserContext.Provider value={{ user, setUser, logout }}>
+    <UserContext.Provider value={{ user, setUser, isLoading, logout }}>
       {children}
     </UserContext.Provider>
   );
 };
 
-// Custom hook to use the UserContext
-export const useUser = () => {
-  const context = useContext(UserContext);
-  if (!context) {
-    throw new Error('useUser must be used within a UserProvider');
-  }
-  return context;
-};
+// Custom hook for using the context
+export const useUser = () => useContext(UserContext);
