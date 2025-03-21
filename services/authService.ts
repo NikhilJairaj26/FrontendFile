@@ -1,63 +1,112 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Define the API URL from environment variables or default to a local URL
-const API_URL = process.env.API_URL || 'http://192.168.79.108:5000/api';
+// ✅ Use a valid API URL
+const API_URL = "https://701f-2a09-bac5-3da2-eaa-00-176-70.ngrok-free.app/api";
 
-// Define the structure of the response data
-interface AuthResponse {
-  token: string;
-  user: {
-    email: string;
-  };
+// ✅ User Interface
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
 }
 
-// Login function
+// ✅ Authentication Response Interface
+interface AuthResponse {
+  token: string;
+  user: User;
+}
+
+// ✅ Store token securely
+const storeToken = async (token: string): Promise<void> => {
+  try {
+    await AsyncStorage.setItem("token", token);
+  } catch (error) {
+    console.error("❌ Error storing token:", error instanceof Error ? error.message : error);
+  }
+};
+
+// ✅ Get stored token
+const getToken = async (): Promise<string | null> => {
+  try {
+    return await AsyncStorage.getItem("token");
+  } catch (error) {
+    console.error("❌ Error fetching token:", error instanceof Error ? error.message : error);
+    return null;
+  }
+};
+
+// ✅ Remove token (logout)
+const removeToken = async (): Promise<void> => {
+  try {
+    await AsyncStorage.removeItem("token");
+  } catch (error) {
+    console.error("❌ Error removing token:", error instanceof Error ? error.message : error);
+  }
+};
+
+// ✅ General function to handle API requests
+const apiRequest = async (
+  endpoint: string,
+  method: "GET" | "POST" | "PUT" | "DELETE",
+  body?: object,
+  auth: boolean = false
+): Promise<any> => {
+  try {
+    const headers: HeadersInit = { "Content-Type": "application/json" };
+
+    if (auth) {
+      const token = await getToken();
+      if (!token) throw new Error("Unauthorized: No token found");
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+
+    // ✅ Validate Response & Parse JSON Safely
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Server Error: ${response.status} - ${errorText}`);
+    }
+
+    return response.status !== 204 ? await response.json() : null; // Handle empty responses
+  } catch (error) {
+    console.error("❌ API Request Error:", error instanceof Error ? error.message : "Network request failed");
+    throw new Error(error instanceof Error ? error.message : "Network request failed");
+  }
+};
+
+// ✅ Login function
 export const login = async (email: string, password: string): Promise<AuthResponse> => {
-  try {
-    const response = await fetch(`${API_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.message || 'Login failed');
-    }
-
-    const data: AuthResponse = await response.json();
-    await AsyncStorage.setItem('token', data.token); // Save token to AsyncStorage
-    return data;
-  } catch (err) {
-    console.error('Login error:', err);
-    throw new Error('Network request failed. Please check your connection.');
-  }
+  const data = await apiRequest("/auth/login", "POST", { email, password });
+  await storeToken(data.token);
+  return data;
 };
 
-// Register function
-export const register = async (email: string, password: string): Promise<AuthResponse> => {
-  try {
-    const response = await fetch(`${API_URL}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.message || 'Registration failed');
-    }
-
-    const data: AuthResponse = await response.json();
-    await AsyncStorage.setItem('token', data.token); // Save token to AsyncStorage
-    return data;
-  } catch (err) {
-    console.error('Registration error:', err);
-    throw new Error('Network request failed. Please check your connection.');
-  }
+// ✅ Register function
+export const register = async (email: string, password: string, repassword: string, avatar?: string): Promise<AuthResponse> => {
+  const data = await apiRequest("/auth/register", "POST", { email, password, repassword, avatar });
+  await storeToken(data.token);
+  return data;
 };
 
-// Logout function
+// ✅ Logout function
 export const logout = async (): Promise<void> => {
-  await AsyncStorage.removeItem('token'); // Remove token from AsyncStorage
+  await removeToken();
+  console.log("✅ Successfully logged out");
+};
+
+// ✅ Get authenticated user
+export const getAuthenticatedUser = async (): Promise<User | null> => {
+  try {
+    const data = await apiRequest("/auth/user", "GET", undefined, true);
+    return data?.user || null;
+  } catch (error) {
+    console.error("❌ Error fetching user:", error instanceof Error ? error.message : error);
+    return null;
+  }
 };

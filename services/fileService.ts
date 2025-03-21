@@ -1,6 +1,7 @@
 import * as FileSystem from 'expo-file-system';
+import { Transfer } from '../types';
 
-const API_URL = process.env.API_URL;
+const API_URL = process.env.API_URL || 'https://your-backend-url.com/api'; // Ensure API URL is defined
 
 interface FileResponse {
   id: string;
@@ -8,21 +9,12 @@ interface FileResponse {
   size: number;
   type: string;
   url: string;
-  qrCodeUrl?: string; // Optional QR code URL for file sharing
-}
-
-interface Transfer {
-  id: string;
-  fileName: string;
-  fileSize: string;
-  sender: string;
-  recipient: string;
-  date: string;
+  qrCodeUrl?: string;
 }
 
 interface UploadResponse {
   file: FileResponse;
-  qrCodeUrl: string; // QR code URL for file sharing
+  qrCodeUrl: string;
 }
 
 interface SendResponse {
@@ -33,6 +25,14 @@ interface SendResponse {
 interface ReceiveResponse {
   file: FileResponse;
 }
+
+const handleResponse = async (response: Response) => {
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+  return response.json();
+};
 
 /**
  * Fetch recent file transfers for the authenticated user.
@@ -47,11 +47,17 @@ export const getRecentTransfers = async (token: string): Promise<Transfer[]> => 
       },
     });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch recent transfers');
-    }
+    const data = await handleResponse(response);
 
-    return await response.json();
+    return data.map((item: any) => ({
+      id: Number(item.id), // Ensure id is a number
+      fileName: item.name || 'Unknown File',
+      size: item.size ? `${item.size} MB` : 'Unknown',
+      sender: item.sender || 'Unknown Sender',
+      recipient: item.recipient || 'Unknown Recipient',
+      date: item.date || new Date().toISOString(),
+      fileType: item.fileType || 'document',
+    }));
   } catch (err) {
     console.error('Error fetching recent transfers:', err);
     throw err;
@@ -71,24 +77,19 @@ export const uploadFile = async (fileUri: string, token: string): Promise<Upload
     const formData = new FormData();
     formData.append('file', {
       uri: fileUri,
-      name: fileUri.split('/').pop(), // Extract file name from URI
-      type: 'application/octet-stream', // Default MIME type
+      name: fileUri.split('/').pop(),
+      type: 'application/octet-stream',
     } as any);
 
     const response = await fetch(`${API_URL}/files/upload`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'multipart/form-data',
       },
       body: formData,
     });
 
-    if (!response.ok) {
-      throw new Error('File upload failed');
-    }
-
-    return await response.json();
+    return await handleResponse(response);
   } catch (err) {
     console.error('Error uploading file:', err);
     throw err;
@@ -110,17 +111,10 @@ export const sendFile = async (
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({
-        fileId,
-        recipientId,
-      }),
+      body: JSON.stringify({ fileId, recipientId }),
     });
 
-    if (!response.ok) {
-      throw new Error('File send failed');
-    }
-
-    return await response.json();
+    return await handleResponse(response);
   } catch (err) {
     console.error('Error sending file:', err);
     throw err;
@@ -141,11 +135,7 @@ export const receiveFile = async (token: string, fileId: string): Promise<Receiv
       body: JSON.stringify({ fileId }),
     });
 
-    if (!response.ok) {
-      throw new Error('File receive failed');
-    }
-
-    return await response.json();
+    return await handleResponse(response);
   } catch (err) {
     console.error('Error receiving file:', err);
     throw err;

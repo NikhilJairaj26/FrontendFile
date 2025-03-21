@@ -1,38 +1,61 @@
 {
   "expo": {
-    "name": "a0-project", 
-    "slug": "a0-project", 
-    "version": "1.0.0", 
-    "orientation": "portrait", 
-    "icon": "./assets/icon.png", 
-    "userInterfaceStyle": "light", 
+    "name": "A0 Project",
+    "slug": "a0-project",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash-icon.png", 
-      "resizeMode": "contain", 
-      "backgroundColor": "#ffffff" 
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
     },
     "updates": {
-      "enabled": true, 
-      "fallbackToCacheTimeout": 0 
+      "enabled": true,
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD"
     },
-    "assetBundlePatterns": ["**/*"], 
+    "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true, 
-      "bundleIdentifier": "com.yourcompany.a0project", 
-      "buildNumber": "1.0.0" 
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourcompany.a0project",
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app requires camera access to scan QR codes.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library for file transfers.",
+        "NSMicrophoneUsageDescription": "This app requires microphone access for voice-related features.",
+        "NSUserTrackingUsageDescription": "We use tracking data to improve your experience."
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png", 
-        "backgroundColor": "#ffffff" 
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
       },
-      "package": "com.yourcompany.a0project", 
-      "versionCode": 1 
+      "package": "com.yourcompany.a0project",
+      "versionCode": 2,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "VIBRATE"
+      ]
     },
     "web": {
-      "favicon": "./assets/favicon.png" 
+      "favicon": "./assets/favicon.png"
     },
-    "description": "Quickly generate React Native components with AI", 
-    "githubUrl": "https://github.com/yourusername/a0-project" 
+    "description": "Quickly generate React Native components with AI.",
+    "githubUrl": "https://github.com/yourusername/a0-project",
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id"
+      }
+    },
+    "plugins": [
+      "expo-barcode-scanner",
+      "expo-image-picker"
+    ]
   }
 }

@@ -19,20 +19,33 @@ import { LinearGradient } from "expo-linear-gradient";
 import { toast } from "sonner-native";
 import CustomText from "../components/CustomText";
 
+// Define UserState type for better type safety
+type UserState = {
+  name: string;
+  avatar: string;
+  device: string;
+};
+
+// Mock user data
+const user: UserState = {
+  name: "Alex Morgan",
+  avatar: "https://api.a0.dev/assets/image?text=professional%20headshot%20person&aspect=1:1",
+  device: "iPhone 14 Pro",
+};
+
 export default function ProfileScreen() {
   const navigation = useNavigation();
-  const [wifiOnly, setWifiOnly] = useState(true);
-  const [autoAccept, setAutoAccept] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
-  const [notifications, setNotifications] = useState(true);
 
-  const toggleWifiOnly = () => setWifiOnly((prev) => !prev);
-  const toggleAutoAccept = () => setAutoAccept((prev) => !prev);
-  const toggleDarkMode = () => {
-    setDarkMode((prev) => !prev);
-    toast(`Dark mode ${!darkMode ? "enabled" : "disabled"}`);
+  // State for settings
+  const [wifiOnly, setWifiOnly] = useState<boolean>(true);
+  const [autoAccept, setAutoAccept] = useState<boolean>(false);
+  const [darkMode, setDarkMode] = useState<boolean>(false);
+  const [notifications, setNotifications] = useState<boolean>(true);
+
+  const toggleSwitch = (setter: React.Dispatch<React.SetStateAction<boolean>>, label: string) => {
+    setter((prev) => !prev);
+    toast(`${label} ${!darkMode ? "enabled" : "disabled"}`);
   };
-  const toggleNotifications = () => setNotifications((prev) => !prev);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -50,13 +63,10 @@ export default function ProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* User Profile */}
         <View style={styles.profileSection}>
-          <Image
-            source={{ uri: "https://api.a0.dev/assets/image?text=professional%20headshot%20person&aspect=1:1" }}
-            style={styles.profileImage}
-          />
+          <Image source={{ uri: user.avatar }} style={styles.profileImage} />
           <View style={styles.profileInfo}>
-            <CustomText style={styles.profileName}>Alex Morgan</CustomText>
-            <CustomText style={styles.profileDevice}>iPhone 14 Pro</CustomText>
+            <CustomText style={styles.profileName}>{user.name}</CustomText>
+            <CustomText style={styles.profileDevice}>{user.device}</CustomText>
           </View>
           <TouchableOpacity style={styles.editButton} onPress={() => toast("Edit profile")}>
             <Feather name="edit-2" size={20} color="#4a26fd" />
@@ -67,42 +77,38 @@ export default function ProfileScreen() {
         <View style={styles.settingsSection}>
           <CustomText style={styles.sectionTitle}>Transfer Settings</CustomText>
 
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <MaterialCommunityIcons name="wifi" size={24} color="#4a26fd" />
-              <CustomText style={styles.settingText}>Wi-Fi Only Transfers</CustomText>
-            </View>
-            <Switch trackColor={{ false: "#ddd", true: "#4a26fd" }} thumbColor={wifiOnly ? "#4a26fd" : "#f4f3f4"} onValueChange={toggleWifiOnly} value={wifiOnly} />
-          </View>
+          <SettingItem
+            icon="wifi"
+            label="Wi-Fi Only Transfers"
+            value={wifiOnly}
+            onToggle={() => setWifiOnly((prev) => !prev)}
+          />
 
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <MaterialCommunityIcons name="check-circle-outline" size={24} color="#4a26fd" />
-              <CustomText style={styles.settingText}>Auto-Accept from Contacts</CustomText>
-            </View>
-            <Switch trackColor={{ false: "#ddd", true: "#4a26fd" }} thumbColor={autoAccept ? "#4a26fd" : "#f4f3f4"} onValueChange={toggleAutoAccept} value={autoAccept} />
-          </View>
+          <SettingItem
+            icon="check-circle-outline"
+            label="Auto-Accept from Contacts"
+            value={autoAccept}
+            onToggle={() => setAutoAccept((prev) => !prev)}
+          />
         </View>
 
         {/* App Settings */}
         <View style={styles.settingsSection}>
           <CustomText style={styles.sectionTitle}>App Settings</CustomText>
 
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <MaterialCommunityIcons name="weather-night" size={24} color="#4a26fd" />
-              <CustomText style={styles.settingText}>Dark Mode</CustomText>
-            </View>
-            <Switch trackColor={{ false: "#ddd", true: "#4a26fd" }} thumbColor={darkMode ? "#4a26fd" : "#f4f3f4"} onValueChange={toggleDarkMode} value={darkMode} />
-          </View>
+          <SettingItem
+            icon="weather-night"
+            label="Dark Mode"
+            value={darkMode}
+            onToggle={() => toggleSwitch(setDarkMode, "Dark Mode")}
+          />
 
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <MaterialCommunityIcons name="bell-outline" size={24} color="#4a26fd" />
-              <CustomText style={styles.settingText}>Notifications</CustomText>
-            </View>
-            <Switch trackColor={{ false: "#ddd", true: "#4a26fd" }} thumbColor={notifications ? "#4a26fd" : "#f4f3f4"} onValueChange={toggleNotifications} value={notifications} />
-          </View>
+          <SettingItem
+            icon="bell-outline"
+            label="Notifications"
+            value={notifications}
+            onToggle={() => setNotifications((prev) => !prev)}
+          />
         </View>
 
         {/* Logout Button */}
@@ -117,11 +123,29 @@ export default function ProfileScreen() {
   );
 }
 
+// Reusable SettingItem component
+const SettingItem = ({
+  icon,
+  label,
+  value,
+  onToggle,
+}: {
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  label: string;
+  value: boolean;
+  onToggle: () => void;
+}) => (
+  <View style={styles.settingItem}>
+    <View style={styles.settingInfo}>
+      <MaterialCommunityIcons name={icon} size={24} color="#4a26fd" />
+      <CustomText style={styles.settingText}>{label}</CustomText>
+    </View>
+    <Switch trackColor={{ false: "#ddd", true: "#4a26fd" }} thumbColor={value ? "#4a26fd" : "#f4f3f4"} onValueChange={onToggle} value={value} />
+  </View>
+);
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8f9fa",
-  },
+  container: { flex: 1, backgroundColor: "#f8f9fa" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -132,17 +156,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
-  backButton: {
-    padding: 5,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  placeholder: {
-    width: 34,
-  },
+  backButton: { padding: 5 },
+  headerTitle: { fontSize: 20, fontWeight: "bold", color: "#333" },
+  placeholder: { width: 34 },
   profileSection: {
     flexDirection: "row",
     alignItems: "center",
@@ -153,25 +169,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     elevation: 2,
   },
-  profileImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-  },
-  profileInfo: {
-    flex: 1,
-    marginLeft: 15,
-  },
-  profileName: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 5,
-  },
-  profileDevice: {
-    fontSize: 14,
-    color: "#777",
-  },
+  profileImage: { width: 70, height: 70, borderRadius: 35 },
+  profileInfo: { flex: 1, marginLeft: 15 },
+  profileName: { fontSize: 18, fontWeight: "bold", color: "#333", marginBottom: 5 },
+  profileDevice: { fontSize: 14, color: "#777" },
   editButton: {
     width: 40,
     height: 40,
@@ -188,45 +189,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     elevation: 2,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 15,
-  },
-  settingItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  settingInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  settingText: {
-    marginLeft: 12,
-    fontSize: 15,
-    color: "#333",
-  },
-  logoutButton: {
-    marginHorizontal: 20,
-    marginBottom: 30,
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  logoutGradient: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 16,
-  },
-  logoutText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
-    marginRight: 8,
-  },
+  sectionTitle: { fontSize: 16, fontWeight: "bold", color: "#333", marginBottom: 15 },
+  settingItem: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },
+  settingInfo: { flexDirection: "row", alignItems: "center" },
+  settingText: { marginLeft: 12, fontSize: 15, color: "#333" },
+  logoutButton: { marginHorizontal: 20, marginBottom: 30, borderRadius: 12, overflow: "hidden" },
+  logoutGradient: { flexDirection: "row", justifyContent: "center", alignItems: "center", paddingVertical: 16 },
+  logoutText: { color: "white", fontSize: 16, fontWeight: "bold", marginRight: 8 },
 });
+
