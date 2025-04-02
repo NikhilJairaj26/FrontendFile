@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   TextInput,
@@ -11,69 +11,76 @@ import {
   TouchableWithoutFeedback,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { register } from "../services/authService"; // Ensure this function works correctly
+import { register } from "../services/authService";
 import { useUser } from "../context/UserContext";
 import { RegisterScreenNavigationProp } from "../types";
 
 export default function RegisterScreen() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [repassword, setRepassword] = useState(""); // `repassword` matches backend expectation
-  const [error, setError] = useState("");
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    repassword: "",
+  });
+  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const navigation = useNavigation<RegisterScreenNavigationProp>();
-  const { setUser } = useUser(); // User context
+  const { setUser } = useUser();
 
-  // Validate Email
-  const isValidEmail = (email: string) => /\S+@\S+\.\S+/.test(email);
+  // ✅ Validate Email
+  const isValidEmail = useCallback((email: string) => /\S+@\S+\.\S+/.test(email), []);
 
-  // Handle Registration
+  // ✅ Handle Input Change
+  const handleChange = (field: keyof typeof form, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // ✅ Validate Input
+  const validateForm = useCallback(() => {
+    if (!form.name.trim() || !form.email.trim() || !form.password.trim() || !form.repassword.trim()) {
+      return "⚠️ All fields are required.";
+    }
+    if (form.name.length < 3) {
+      return "⚠️ Name must be at least 3 characters long.";
+    }
+    if (!isValidEmail(form.email)) {
+      return "⚠️ Please enter a valid email address.";
+    }
+    if (form.password.length < 6) {
+      return "⚠️ Password must be at least 6 characters long.";
+    }
+    if (form.password !== form.repassword) {
+      return "⚠️ Passwords do not match.";
+    }
+    return null;
+  }, [form, isValidEmail]);
+
+  // ✅ Handle Registration
   const handleRegister = async () => {
-    setError(""); // Reset error state
+    setError(null);
+    Keyboard.dismiss();
 
-    // Form Validation
-    if (!name.trim() || !email.trim() || !password.trim() || !repassword.trim()) {
-      setError("⚠️ All fields are required.");
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
-    if (name.length < 3) {
-      setError("⚠️ Name must be at least 3 characters long.");
-      return;
-    }
-
-    if (!isValidEmail(email)) {
-      setError("⚠️ Please enter a valid email address.");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("⚠️ Password must be at least 6 characters long.");
-      return;
-    }
-
-    if (password !== repassword) {
-      setError("⚠️ Passwords do not match.");
-      return;
-    }
-
-    setIsLoading(true); // Show loading indicator
+    setIsLoading(true);
 
     try {
-      const { user, token } = await register(name, email, password, repassword); // Call API
+      const { user, token } = await register(form.name, form.email, form.password, form.repassword);
       if (!user || !token) {
         throw new Error("Invalid response from server.");
       }
 
-      // Store user in context (DO NOT STORE `repassword`)
       await setUser({ id: user.id, name: user.name, email: user.email, token });
 
       Alert.alert("🎉 Success", "Registration completed. Please log in.");
-      navigation.navigate("Login"); // Redirect to login screen
+      navigation.navigate("Login");
     } catch (err: any) {
-      console.error("Registration failed:", err);
+      console.error("❌ Registration failed:", err);
       setError(err.message || "❌ Registration failed. Please try again.");
       Alert.alert("⚠️ Error", err.message || "Registration failed. Please check your details.");
     } finally {
@@ -90,8 +97,8 @@ export default function RegisterScreen() {
           style={styles.input}
           placeholder="Full Name"
           placeholderTextColor="#888"
-          value={name}
-          onChangeText={setName}
+          value={form.name}
+          onChangeText={(value) => handleChange("name", value)}
           autoCapitalize="words"
         />
 
@@ -101,8 +108,8 @@ export default function RegisterScreen() {
           placeholderTextColor="#888"
           keyboardType="email-address"
           autoCapitalize="none"
-          value={email}
-          onChangeText={setEmail}
+          value={form.email}
+          onChangeText={(value) => handleChange("email", value)}
         />
 
         <TextInput
@@ -110,8 +117,8 @@ export default function RegisterScreen() {
           placeholder="Password"
           placeholderTextColor="#888"
           secureTextEntry
-          value={password}
-          onChangeText={setPassword}
+          value={form.password}
+          onChangeText={(value) => handleChange("password", value)}
         />
 
         <TextInput
@@ -119,13 +126,17 @@ export default function RegisterScreen() {
           placeholder="Confirm Password"
           placeholderTextColor="#888"
           secureTextEntry
-          value={repassword}
-          onChangeText={setRepassword}
+          value={form.repassword}
+          onChangeText={(value) => handleChange("repassword", value)}
         />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error && <Text style={styles.error}>{error}</Text>}
 
-        <TouchableOpacity style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleRegister} disabled={isLoading}>
+        <TouchableOpacity
+          style={[styles.button, isLoading && styles.buttonDisabled]}
+          onPress={handleRegister}
+          disabled={isLoading}
+        >
           {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Register</Text>}
         </TouchableOpacity>
 
@@ -137,7 +148,7 @@ export default function RegisterScreen() {
   );
 }
 
-// Styles
+// ✅ Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,

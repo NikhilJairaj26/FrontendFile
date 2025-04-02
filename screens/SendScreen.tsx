@@ -10,7 +10,7 @@ import { FontAwesome } from '@expo/vector-icons';
 
 export default function SendScreen() {
   const { user } = useUser();
-  const [fileUri, setFileUri] = useState<string | null>(null);
+  const [file, setFile] = useState<{ uri: string; name: string; type: string } | null>(null);
   const [scanning, setScanning] = useState<boolean>(false);
   const [recipientId, setRecipientId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -26,9 +26,15 @@ export default function SendScreen() {
   // Handle file selection
   const pickFile = async () => {
     try {
-      const filePicker = await DocumentPicker.getDocumentAsync({ type: '*/*' });
-      if (filePicker.canceled || !filePicker.assets?.length) return;
-      setFileUri(filePicker.assets[0].uri);
+      const result = await DocumentPicker.getDocumentAsync({ type: '*/*' });
+      if (result.canceled || !result.assets?.length) return;
+      const pickedFile = result.assets[0];
+
+      setFile({
+        uri: pickedFile.uri,
+        name: pickedFile.name || 'file',
+        type: pickedFile.mimeType || 'application/octet-stream',
+      });
     } catch (error) {
       Alert.alert('Error', 'Failed to pick a file');
     }
@@ -47,19 +53,20 @@ export default function SendScreen() {
       Alert.alert('Error', 'You must be logged in to send files');
       return;
     }
-    if (!fileUri || !recipientId) {
+    if (!file || !recipientId) {
       Alert.alert('Error', 'Please select a file and scan a recipient QR code first');
       return;
     }
 
     setLoading(true);
     try {
-      const uploadResponse = await uploadFile(fileUri, user.token);
+      const uploadResponse = await uploadFile(file, user.token);
       const sendResponse = await sendFile(uploadResponse.file.id, user.token, recipientId);
       Alert.alert('Success', sendResponse.message);
-      setFileUri(null);
+      setFile(null);
       setRecipientId(null);
     } catch (error) {
+      console.error(error);
       Alert.alert('Error', 'File transfer failed');
     }
     setLoading(false);
@@ -98,7 +105,7 @@ export default function SendScreen() {
           <TouchableOpacity style={styles.button} onPress={pickFile}>
             <LinearGradient colors={['#4a90e2', '#50b5ff']} style={styles.gradient}>
               <FontAwesome name="file" size={24} color="white" />
-              <CustomText>Select File</CustomText>
+              <CustomText>{file ? file.name : 'Select File'}</CustomText>
             </LinearGradient>
           </TouchableOpacity>
 

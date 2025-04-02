@@ -6,63 +6,71 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { login } from '../services/authService';
+import NetInfo from "@react-native-community/netinfo";
 import { useUser } from '../context/UserContext';
 import { LoginScreenNavigationProp } from '../types';
 
+// Backend API URL
+const API_URL = "http://192.168.137.108:5000/api/auth/login";
+
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('test@example.com');
+  const [password, setPassword] = useState('password123');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const { setUser } = useUser();
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      setError('Please fill in all fields');
-      return;
-    }
-    
-    setIsLoading(true);
-    setError('');
-    
     try {
-      const response = await login(email, password);
-      
-      if (!response || !response.token || !response.user) {
-        throw new Error('Invalid response from server');
+      setIsLoading(true);
+      setError('');
+  
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+  
+      const responseData = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(responseData.message || '❌ Login failed. Please try again.');
       }
-      
-      const { token, user } = response;
-      
-      // Save user data to AsyncStorage
-      await AsyncStorage.setItem('token', token);
-      await AsyncStorage.setItem('userEmail', user.email);
-      
-      // Update user context
-      setUser({ email: user.email, token });
-      
-      // No need to navigate - RootNavigator will handle this automatically
-    } catch (err) {
-      let errorMessage = 'Something went wrong';
-      
-      if (err instanceof Error) {
-        console.error('Login failed:', err.message);
-        
-        if (err.message.includes('Network request failed')) {
-          errorMessage = 'Network error. Please check your internet connection.';
-        } else {
-          errorMessage = 'Invalid email or password';
-        }
+  
+      const { token, user } = responseData;
+      if (!token || !user) {
+        throw new Error("Invalid server response. Please try again.");
       }
-      
-      setError(errorMessage);
-      Alert.alert('Login Failed', errorMessage);
+  
+      await AsyncStorage.multiSet([
+        ['auth_token', token],
+        ['userEmail', user.email],
+        ['userId', user.id],
+        ['userName', user.name]
+      ]);
+  
+      setUser({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        token
+      });
+  
+      Alert.alert("🎉 Success", "Login successful!");
+      // navigation.navigate("Profile"); // Navigate to the Profile screen
+  
+    } catch (err: any) {
+      setError(err.message || "❌ Login failed. Please try again.");
+      Alert.alert("⚠️ Login Failed", err.message || "Login failed.");
     } finally {
       setIsLoading(false);
     }
   };
+  
 
   return (
     <KeyboardAvoidingView
@@ -115,6 +123,7 @@ export default function LoginScreen() {
   );
 }
 
+// Styles
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 

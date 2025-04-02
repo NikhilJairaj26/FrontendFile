@@ -1,6 +1,6 @@
 import React from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Toaster } from 'sonner-native';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
@@ -24,10 +24,12 @@ export default function App() {
 
 // Separate component that can access the UserContext
 function AppContent() {
+  const navigationRef = useNavigationContainerRef();
+
   return (
     <>
       <Toaster />
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef} onStateChange={() => console.log(navigationRef.getRootState())}>
         <RootNavigator />
       </NavigationContainer>
     </>

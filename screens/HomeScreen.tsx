@@ -13,11 +13,11 @@ import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import RecentTransferCard from '../components/RecentTransferCard';
-import { getRecentTransfers } from '../services/fileService';
+// import { getRecentTransfers } from '../services/fileService';
 import { HomeScreenNavigationProp, Transfer } from '../types';
 import { useUser } from '../context/UserContext';
 
-const HomeScreen = (): React.JSX.Element => {
+const HomeScreen = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const { user } = useUser();
   
@@ -36,8 +36,8 @@ const HomeScreen = (): React.JSX.Element => {
 
       try {
         setIsLoading(true);
-        const data = await getRecentTransfers(user.token);
-        setRecentTransfers(data);
+        // const data = await getRecentTransfers(user.token);
+        // setRecentTransfers(data);
       } catch (err) {
         console.error('Error fetching recent transfers:', err);
         setError('Failed to load recent transfers.');

@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// ✅ Use a valid API URL
-const API_URL = "https://701f-2a09-bac5-3da2-eaa-00-176-70.ngrok-free.app/api";
+// ✅ Use a valid API URL (Ensure this is environment-configurable)
+const API_URL = "http://192.168.137.108:5000/api";
 
 // ✅ User Interface
 interface User {
@@ -17,7 +17,7 @@ interface AuthResponse {
   user: User;
 }
 
-// ✅ Store token securely
+// ✅ Securely store token
 const storeToken = async (token: string): Promise<void> => {
   try {
     await AsyncStorage.setItem("token", token);
@@ -26,7 +26,7 @@ const storeToken = async (token: string): Promise<void> => {
   }
 };
 
-// ✅ Get stored token
+// ✅ Retrieve stored token
 const getToken = async (): Promise<string | null> => {
   try {
     return await AsyncStorage.getItem("token");
@@ -46,12 +46,12 @@ const removeToken = async (): Promise<void> => {
 };
 
 // ✅ General function to handle API requests
-const apiRequest = async (
+const apiRequest = async <T>(
   endpoint: string,
   method: "GET" | "POST" | "PUT" | "DELETE",
   body?: object,
   auth: boolean = false
-): Promise<any> => {
+): Promise<T> => {
   try {
     const headers: HeadersInit = { "Content-Type": "application/json" };
 
@@ -67,13 +67,12 @@ const apiRequest = async (
       body: body ? JSON.stringify(body) : undefined,
     });
 
-    // ✅ Validate Response & Parse JSON Safely
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Server Error: ${response.status} - ${errorText}`);
+      const errorData = await response.json();
+      throw new Error(errorData.message || `Server Error: ${response.status}`);
     }
 
-    return response.status !== 204 ? await response.json() : null; // Handle empty responses
+    return response.status !== 204 ? await response.json() : (null as T); // Handle empty responses
   } catch (error) {
     console.error("❌ API Request Error:", error instanceof Error ? error.message : "Network request failed");
     throw new Error(error instanceof Error ? error.message : "Network request failed");
@@ -82,14 +81,14 @@ const apiRequest = async (
 
 // ✅ Login function
 export const login = async (email: string, password: string): Promise<AuthResponse> => {
-  const data = await apiRequest("/auth/login", "POST", { email, password });
+  const data = await apiRequest<AuthResponse>("/auth/login", "POST", { email, password });
   await storeToken(data.token);
   return data;
 };
 
 // ✅ Register function
 export const register = async (email: string, password: string, repassword: string, avatar?: string): Promise<AuthResponse> => {
-  const data = await apiRequest("/auth/register", "POST", { email, password, repassword, avatar });
+  const data = await apiRequest<AuthResponse>("/auth/register", "POST", { email, password, repassword, avatar });
   await storeToken(data.token);
   return data;
 };
@@ -103,7 +102,7 @@ export const logout = async (): Promise<void> => {
 // ✅ Get authenticated user
 export const getAuthenticatedUser = async (): Promise<User | null> => {
   try {
-    const data = await apiRequest("/auth/user", "GET", undefined, true);
+    const data = await apiRequest<{ user: User }>("/auth/user", "GET", undefined, true);
     return data?.user || null;
   } catch (error) {
     console.error("❌ Error fetching user:", error instanceof Error ? error.message : error);
